@@ -1,0 +1,64 @@
+<!doctype html>
+<!--
+  The web platform's launcher page (design §13 new platform). It is a dumb host: a canvas
+  the core's Slint renderer draws into, plus the SHELL unit bootstrap. No domain logic, no
+  view-model decoding here — that all lives in the core (the C shell + the Rust renderer).
+-->
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>J2ME</title>
+		<style>
+			html,
+			body {
+				margin: 0;
+				height: 100%;
+				width: 100%;
+				/* Clip any surface that is wider/taller than the viewport (the absolutely-positioned
+				   #game canvas is sized to the core display rect, which can momentarily exceed a
+				   shrinking window) so the page never grows a scrollbar. */
+				overflow: hidden;
+				background: #0f0f14;
+			}
+			/* Mobile full-bleed: two stacked canvases fill the viewport. #game (the VM unit's GAME
+			   surface) sits below; #screen (the core's Slint UI/keypad surface) sits above with a
+			   transparent background, so on PLAYING the alpha-keyed overlay lets the game show
+			   through. The platform only z-orders two finished surfaces (no semantic compositing). */
+			#stage {
+				position: relative;
+				height: 100%;
+				width: 100%;
+				overflow: hidden;
+			}
+			#game,
+			#screen {
+				position: absolute;
+				inset: 0;
+				display: block;
+				width: 100%;
+				height: 100%;
+				touch-action: none;
+			}
+			#game {
+				background: #000;
+				z-index: 0;
+				/* The GAME surface presents the FULL framebuffer (its w*h bitmap); the browser
+				   letterboxes it within this full-bleed box, so the host never positions/scales the
+				   canvas per frame (the present's x/y/dw/dh are unused). */
+				object-fit: contain;
+				image-rendering: pixelated;
+			}
+			#screen {
+				background: transparent;
+				z-index: 1;
+			}
+		</style>
+		<script type="module" crossorigin src="/web-j2me/assets/index-DE4eqbzq.js"></script>
+	</head>
+	<body>
+		<div id="stage">
+			<canvas id="game"></canvas><canvas id="screen"></canvas>
+		</div>
+	</body>
+</html>
