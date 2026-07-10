@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+		/>
+		<title>RobustaME — shell topology spike</title>
+		<style>
+			:root {
+				/* Expose the platform safe-area insets as CSS custom properties so
+				   the wasm host can read env(safe-area-inset-*) (which is not
+				   script-readable directly) off the computed style of <html> and
+				   feed the core-owned SafeArea global. */
+				--sai-top: env(safe-area-inset-top, 0px);
+				--sai-right: env(safe-area-inset-right, 0px);
+				--sai-bottom: env(safe-area-inset-bottom, 0px);
+				--sai-left: env(safe-area-inset-left, 0px);
+			}
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+				width: 100%;
+				height: 100%;
+				/* No page scroll / white gutters: the shell fills the viewport and
+				   the wasm host keeps the canvas sized to it (resize + rotation). */
+				overflow: hidden;
+				/* Brand espresso (palette.json brand.espresso = #3B281B): the same
+				   backplate as the splash below and the in-shell BootSplash, so
+				   overscroll regions and the pre-splash flash show no foreign color
+				   (was #0b0b0f). */
+				background: #3b281b;
+				color: #e6e6f0;
+				font-family: system-ui, sans-serif;
+			}
+			/* Slint's winit backend (web) binds to an existing element with
+			   id="canvas" (see i-slint-backend-winit winitwindowadapter.rs:
+			   get_element_by_id("canvas")). It must exist before start().
+			   The wasm host drives the real size via window.set_size(); these
+			   fallbacks only cover the pre-wasm paint (winit then sets an inline
+			   width/height that governs). Sized in dvh so the initial paint tracks
+			   the dynamic viewport (mobile address bar) rather than a locked vh. */
+			#canvas {
+				display: block;
+				width: 100vw;
+				width: 100dvw;
+				height: 100vh;
+				height: 100dvh;
+				outline: none;
+				touch-action: none;
+			}
+			/* -- Instant host-page splash (add-splash-screen, link 1 of 3) --------
+			   Pure HTML/CSS, zero JS, zero extra network: the cream lockup SVG is
+			   inlined below (payload mirrored from
+			   crates/ui/assets/brand/robusta-lockup-mono-cream.svg), so this renders
+			   with the first HTML paint and covers the wasm fetch/instantiate
+			   window. The composition (espresso backplate + centered cream lockup)
+			   matches the in-shell BootSplash so the host->shell handoff shows no
+			   jump. The platform glue (platforms/web/app/src/lib.rs) removes it
+			   after the shell paints its first frame — the ONLY script that touches
+			   it; this markup decides nothing. */
+			#splash {
+				position: fixed;
+				inset: 0;
+				z-index: 2147483647;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				/* Brand espresso backplate — identical to the page + BootSplash. */
+				background: #3b281b;
+			}
+			#splash svg {
+				/* Match the BootSplash sizing rule: scale with the viewport, clamped
+				   to the brand-book minimum (140px) and a comfortable maximum, so
+				   the clearspace around the lockup is always honored. */
+				width: min(50vw, 420px);
+				height: auto;
+			}
+			/* Dismissal: the glue adds `.hidden` after the shell's first frame. The
+			   fade is gated on `prefers-reduced-motion: no-preference`; with reduced
+			   motion there is no transition and the element hides instantly. */
+			#splash.hidden {
+				opacity: 0;
+				pointer-events: none;
+			}
+			@media (prefers-reduced-motion: no-preference) {
+				#splash {
+					transition: opacity 200ms ease-out;
+				}
+			}
+		</style>
+		<script type="module" crossorigin src="./assets/index-C86GVLGL.js"></script>
+	</head>
+	<body>
+		<!-- Host-page splash: espresso backplate + inlined cream lockup. The SVG
+		     payload is mirrored from
+		     crates/ui/assets/brand/robusta-lockup-mono-cream.svg; oxfmt owns this
+		     file and reflows the inline XML, so the acceptance guard compares the
+		     two whitespace-normalized (identical token stream: viewBox, masks,
+		     paths, cream fills). Any edit to the lockup must touch both or fail
+		     that guard. -->
+		<div id="splash">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="51.5 52 1522.92 410">
+				<defs>
+					<clipPath id="fclip">
+						<rect
+							x="-200"
+							y="309"
+							width="912"
+							height="240"
+							transform="rotate(-20 263 297)"
+						/>
+					</clipPath>
+					<mask id="behind">
+						<rect x="-200" y="-200" width="1400" height="912" fill="#fff" />
+						<path
+							d="M211 64H299A55 55 0 0 1 354 119C359.8 213.38 359.8 310.62 351 405A45 45 0 0 1 306 450H204A45 45 0 0 1 159 405C150.2 310.62 150.2 213.38 156 119A55 55 0 0 1 211 64Z"
+							fill="#000"
+							stroke="#000"
+							stroke-width="11"
+						/>
+					</mask>
+					<mask id="keyline">
+						<rect x="-200" y="-200" width="1400" height="912" fill="#fff" />
+						<g clip-path="url(#fclip)">
+							<path
+								d="M52.4 297A210.6 71.4 0 1 0 473.6 297A210.6 71.4 0 1 0 52.4 297ZM70 292.5A193 53.9 0 1 0 456 292.5A193 53.9 0 1 0 70 292.5Z"
+								fill="#000"
+								fill-rule="evenodd"
+								stroke="#000"
+								stroke-width="11"
+								transform="rotate(-20 263 297)"
+							/>
+						</g>
+						<path
+							d="M188 112H322A11 11 0 0 1 333 123V296A11 11 0 0 1 322 307H188A11 11 0 0 1 177 296V123A11 11 0 0 1 188 112Z"
+							fill="#fff"
+						/>
+					</mask>
+					<mask id="front">
+						<rect x="-200" y="-200" width="1400" height="912" fill="#000" />
+						<rect
+							x="-200"
+							y="309"
+							width="912"
+							height="240"
+							transform="rotate(-20 263 297)"
+							fill="#fff"
+						/>
+						<path
+							d="M188 112H322A11 11 0 0 1 333 123V296A11 11 0 0 1 322 307H188A11 11 0 0 1 177 296V123A11 11 0 0 1 188 112Z"
+							fill="#000"
+							stroke="#000"
+							stroke-width="11"
+						/>
+					</mask>
+					<mask id="crackm">
+						<rect x="-200" y="-200" width="1400" height="912" fill="#fff" />
+						<path
+							d="M249 146.27C249.04 146.51 248.94 146.53 249.21 147.74C249.48 148.95 249.82 150.46 250.62 153.5C251.42 156.54 253.09 161.58 254.02 165.99C254.96 170.39 256.26 175.55 256.23 179.93C256.21 184.31 255.06 187.56 253.85 192.26C252.63 196.97 250.46 202.97 248.94 208.18C247.42 213.39 245.68 218.28 244.73 223.52C243.77 228.76 242.75 234.26 243.2 239.62C243.65 244.97 245.88 250.94 247.44 255.66C249 260.39 251.29 265.05 252.56 267.97C253.82 270.88 254.51 272.11 255.02 273.16C255.53 274.21 255.52 274.09 255.62 274.28C260.96 272.49 261.06 272.47 260.79 271.26C260.52 270.05 260.18 268.54 259.38 265.5C258.58 262.46 256.91 257.42 255.98 253.01C255.04 248.61 253.74 243.45 253.77 239.07C253.79 234.69 254.94 231.44 256.15 226.74C257.37 222.03 259.54 216.03 261.06 210.82C262.58 205.61 264.32 200.72 265.27 195.48C266.23 190.24 267.25 184.74 266.8 179.38C266.35 174.03 264.12 168.06 262.56 163.34C261 158.61 258.71 153.95 257.44 151.03C256.18 148.12 255.49 146.89 254.98 145.84C254.47 144.79 254.48 144.91 254.38 144.72Z"
+							fill="#000"
+						/>
+					</mask>
+				</defs>
+				<g mask="url(#behind)">
+					<path
+						d="M52.4 297A210.6 71.4 0 1 0 473.6 297A210.6 71.4 0 1 0 52.4 297ZM70 292.5A193 53.9 0 1 0 456 292.5A193 53.9 0 1 0 70 292.5Z"
+						fill="#F7EFE0"
+						fill-rule="evenodd"
+						transform="rotate(-20 263 297)"
+					/>
+				</g>
+				<g mask="url(#keyline)">
+					<path
+						d="M211 64H299A55 55 0 0 1 354 119C359.8 213.38 359.8 310.62 351 405A45 45 0 0 1 306 450H204A45 45 0 0 1 159 405C150.2 310.62 150.2 213.38 156 119A55 55 0 0 1 211 64ZM239 84H271A6 6 0 0 1 277 90V90A6 6 0 0 1 271 96H239A6 6 0 0 1 233 90V90A6 6 0 0 1 239 84ZM188 112H322A11 11 0 0 1 333 123V296A11 11 0 0 1 322 307H188A11 11 0 0 1 177 296V123A11 11 0 0 1 188 112ZM190.5 322H210A10.5 10.5 0 0 1 220.5 332.5V332.5A10.5 10.5 0 0 1 210 343H190.5A10.5 10.5 0 0 1 180 332.5V332.5A10.5 10.5 0 0 1 190.5 322ZM300 322H319.5A10.5 10.5 0 0 1 330 332.5V332.5A10.5 10.5 0 0 1 319.5 343H300A10.5 10.5 0 0 1 289.5 332.5V332.5A10.5 10.5 0 0 1 300 322ZM190.5 349.5H210A10.5 10.5 0 0 1 220.5 360V360A10.5 10.5 0 0 1 210 370.5H190.5A10.5 10.5 0 0 1 180 360V360A10.5 10.5 0 0 1 190.5 349.5ZM300 349.5H319.5A10.5 10.5 0 0 1 330 360V360A10.5 10.5 0 0 1 319.5 370.5H300A10.5 10.5 0 0 1 289.5 360V360A10.5 10.5 0 0 1 300 349.5ZM190.5 377H210A10.5 10.5 0 0 1 220.5 387.5V387.5A10.5 10.5 0 0 1 210 398H190.5A10.5 10.5 0 0 1 180 387.5V387.5A10.5 10.5 0 0 1 190.5 377ZM245.25 377H264.75A10.5 10.5 0 0 1 275.25 387.5V387.5A10.5 10.5 0 0 1 264.75 398H245.25A10.5 10.5 0 0 1 234.75 387.5V387.5A10.5 10.5 0 0 1 245.25 377ZM300 377H319.5A10.5 10.5 0 0 1 330 387.5V387.5A10.5 10.5 0 0 1 319.5 398H300A10.5 10.5 0 0 1 289.5 387.5V387.5A10.5 10.5 0 0 1 300 377ZM190.5 404.5H210A10.5 10.5 0 0 1 220.5 415V415A10.5 10.5 0 0 1 210 425.5H190.5A10.5 10.5 0 0 1 180 415V415A10.5 10.5 0 0 1 190.5 404.5ZM245.25 404.5H264.75A10.5 10.5 0 0 1 275.25 415V415A10.5 10.5 0 0 1 264.75 425.5H245.25A10.5 10.5 0 0 1 234.75 415V415A10.5 10.5 0 0 1 245.25 404.5ZM300 404.5H319.5A10.5 10.5 0 0 1 330 415V415A10.5 10.5 0 0 1 319.5 425.5H300A10.5 10.5 0 0 1 289.5 415V415A10.5 10.5 0 0 1 300 404.5ZM244 322H266A14 14 0 0 1 280 336V356.5A14 14 0 0 1 266 370.5H244A14 14 0 0 1 230 356.5V336A14 14 0 0 1 244 322Z"
+						fill="#F7EFE0"
+						fill-rule="evenodd"
+					/>
+				</g>
+				<ellipse
+					cx="255"
+					cy="209.5"
+					rx="49"
+					ry="58"
+					transform="rotate(-6 255 209.5)"
+					fill="#F7EFE0"
+					mask="url(#crackm)"
+				/>
+				<g mask="url(#front)">
+					<path
+						d="M52.4 297A210.6 71.4 0 1 0 473.6 297A210.6 71.4 0 1 0 52.4 297ZM70 292.5A193 53.9 0 1 0 456 292.5A193 53.9 0 1 0 70 292.5Z"
+						fill="#F7EFE0"
+						fill-rule="evenodd"
+						transform="rotate(-20 263 297)"
+					/>
+				</g>
+				<path
+					d="M51.0 0.0V-500.0H207.0V-407.2Q238.4 -454.2 286.0 -478.1Q333.6 -502.0 384.0 -502.0V-350.2Q337.6 -350.2 297.1 -340.3Q256.6 -330.4 231.8 -309.5Q207.0 -288.6 207.0 -256.8V0.0Z M678.7 12.0Q600.4 12.0 540.0 -21.5Q479.6 -55.0 445.3 -114.0Q411.0 -173.0 411.0 -250.0Q411.0 -327.0 444.7 -386.0Q478.5 -445.0 538.8 -478.5Q599.2 -512.0 676.5 -512.0Q754.8 -512.0 815.2 -478.5Q875.6 -445.0 909.4 -386.0Q943.2 -327.0 943.2 -250.0Q943.2 -173.0 909.5 -114.0Q875.7 -55.0 815.9 -21.5Q756.0 12.0 678.7 12.0ZM678.6 -131.8Q709.5 -131.8 732.9 -146.9Q756.3 -162.1 769.8 -188.6Q783.2 -215.2 783.2 -250.0Q783.2 -284.8 769.7 -311.4Q756.2 -337.9 732.0 -353.1Q707.9 -368.2 676.8 -368.2Q645.8 -368.2 621.9 -353.1Q598.0 -338.0 584.5 -311.5Q571.0 -285.0 571.0 -250.2Q571.0 -215.4 584.6 -188.9Q598.2 -162.4 622.7 -147.1Q647.1 -131.8 678.6 -131.8Z M1305.4 12.0Q1257.2 12.0 1221.0 -7.5Q1184.8 -27.0 1160.6 -63.8L1155.2 0.0H1007.0V-700.0H1163.0V-440.2Q1187.2 -475.4 1222.6 -493.7Q1258.0 -512.0 1305.4 -512.0Q1375.4 -512.0 1426.0 -480.5Q1476.6 -449.0 1504.0 -390.4Q1531.4 -331.8 1531.4 -250.0Q1531.4 -169.2 1504.0 -110.1Q1476.6 -51.0 1426.0 -19.5Q1375.4 12.0 1305.4 12.0ZM1264.6 -131.6Q1294.9 -131.6 1318.1 -146.9Q1341.4 -162.2 1355.2 -188.8Q1369.0 -215.5 1369.0 -250.0Q1369.0 -284.6 1355.9 -311.1Q1342.7 -337.7 1319.3 -352.6Q1296.0 -367.6 1265.6 -367.6Q1235.8 -367.6 1212.4 -352.6Q1189.1 -337.6 1176.1 -311.0Q1163.0 -284.4 1163.0 -249.9Q1163.0 -215.4 1176.0 -188.6Q1189.0 -161.8 1211.9 -146.7Q1234.9 -131.6 1264.6 -131.6Z M1771.4 12.0Q1711.2 12.0 1670.3 -12.3Q1629.4 -36.6 1608.7 -86.9Q1588.0 -137.2 1588.0 -215.4V-500.0H1744.0V-244.0Q1744.0 -205.0 1753.1 -181.2Q1762.2 -157.4 1779.0 -146.3Q1795.8 -135.2 1819.2 -134.4Q1863.8 -133.6 1887.0 -159.3Q1910.2 -185.0 1910.2 -235.8V-500.0H2066.2V0.0H1919.0L1912.8 -64.4Q1888.6 -27.8 1852.4 -7.9Q1816.2 12.0 1771.4 12.0Z M2344.0 12.0Q2295.0 12.0 2252.5 -2.2Q2210.0 -16.5 2178.8 -43.0Q2147.5 -69.5 2132.5 -107.5L2260.5 -161.5Q2273.5 -136.0 2296.5 -123.5Q2319.5 -111.0 2344.0 -111.0Q2368.5 -111.0 2382.5 -119.2Q2396.5 -127.5 2396.5 -143.0Q2396.5 -159.0 2382.2 -168.0Q2368.0 -177.0 2341.0 -183.5L2297.5 -194.5Q2228.0 -212.5 2190.2 -254.2Q2152.5 -296.0 2152.5 -351.0Q2152.5 -428.0 2205.5 -470.0Q2258.5 -512.0 2352.5 -512.0Q2405.5 -512.0 2446.0 -497.8Q2486.5 -483.5 2514.0 -458.0Q2541.5 -432.5 2554.0 -399.0L2430.0 -347.5Q2423.0 -367.5 2401.2 -378.2Q2379.5 -389.0 2354.0 -389.0Q2332.0 -389.0 2320.0 -379.2Q2308.0 -369.5 2308.0 -354.0Q2308.0 -341.5 2322.2 -333.0Q2336.5 -324.5 2364.5 -317.5L2417.5 -304.5Q2465.0 -293.0 2496.8 -268.5Q2528.5 -244.0 2544.8 -211.2Q2561.0 -178.5 2561.0 -141.5Q2561.0 -94.5 2533.2 -60.0Q2505.5 -25.5 2456.8 -6.8Q2408.0 12.0 2344.0 12.0Z M2837.6 12.0Q2749.4 12.0 2705.6 -30.5Q2661.8 -73.0 2661.8 -152.0V-369.0H2584.0V-500.0H2661.8V-656.0H2817.8V-500.0H2932.0V-369.0H2817.8V-191.2Q2817.8 -160.8 2828.8 -146.7Q2839.8 -132.6 2863.2 -132.6Q2872.0 -132.6 2883.9 -137.3Q2895.8 -142.0 2905.8 -149.0L2959.6 -34.6Q2935.8 -15.4 2902.6 -1.7Q2869.4 12.0 2837.6 12.0Z M3173.5 12.0Q3085.0 12.0 3036.0 -27.8Q2987.0 -67.5 2987.0 -141.0Q2987.0 -220.0 3038.0 -259.0Q3089.0 -298.0 3181.0 -298.0H3303.0Q3298.0 -337.5 3279.5 -360.0Q3261.0 -382.5 3220.0 -382.5Q3191.5 -382.5 3170.5 -369.5Q3149.5 -356.5 3135.0 -334.0L2998.5 -379.0Q3016.0 -415.5 3045.2 -445.8Q3074.5 -476.0 3117.5 -494.0Q3160.5 -512.0 3218.0 -512.0Q3296.0 -512.0 3349.8 -483.0Q3403.5 -454.0 3430.8 -401.8Q3458.0 -349.5 3457.5 -279.0L3456.0 0.0H3310.0L3308.0 -51.0Q3287.5 -20.0 3253.5 -4.0Q3219.5 12.0 3173.5 12.0ZM3208.0 -106.0Q3236.5 -106.0 3258.5 -118.0Q3280.5 -130.0 3293.0 -150.5Q3305.5 -171.0 3305.5 -195.0V-197.5H3239.5Q3189.5 -197.5 3167.5 -183.8Q3145.5 -170.0 3145.5 -145.0Q3145.5 -126.5 3162.0 -116.2Q3178.5 -106.0 3208.0 -106.0Z"
+					fill="#F7EFE0"
+					transform="translate(500 336) scale(0.30385)"
+				/>
+			</svg>
+		</div>
+		<canvas id="canvas"></canvas>
+	</body>
+</html>
